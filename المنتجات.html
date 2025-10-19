@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>نظام مبيعات موحّد — واجهة رئيسية</title>
+<style>
+  :root{
+    --bg:#f7f7f7; --card:#ffffff; --text:#111;
+    --accent:#0aa; --muted:#666; --danger:#ff4d4d; --good:#2e7d32;
+    --glass: rgba(0,0,0,0.03);
+  }
+  *{box-sizing:border-box;font-family:Arial,"Noto Naskh Arabic",sans-serif}
+  body{margin:0;background:var(--bg);color:var(--text);direction:rtl}
+  header{padding:18px;text-align:center;border-bottom:1px solid rgba(0,0,0,0.06);background:linear-gradient(0deg,#fff, #fafafa)}
+  h1{margin:0;font-size:20px}
+  .wrap{padding:18px}
+  /* Dashboard */
+  .dash-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;max-width:900px;margin:18px auto}
+  .dash-btn{background:var(--card);border:2px solid rgba(0,0,0,0.06);padding:22px;border-radius:12px;cursor:pointer; text-align:center;box-shadow:0 6px 18px var(--glass);transition:transform .12s}
+  .dash-btn:hover{transform:translateY(-4px)}
+  .dash-emoji{font-size:28px;display:block;margin-bottom:8px}
+  .muted{color:var(--muted);font-size:13px}
+  @media(max-width:760px){ .dash-grid{grid-template-columns:1fr} }
+
+  /* Pages */
+  .page{display:none;background:var(--card);padding:16px;border-radius:10px;margin:16px auto;max-width:1100px;box-shadow:0 10px 30px var(--glass)}
+  .page.active{display:block}
+
+  /* layout for inventory & sales */
+  .container{display:flex;gap:16px;flex-wrap:wrap}
+  .left{flex:2;min-width:280px}
+  .right{flex:1;min-width:260px}
+  .cat-header{padding:8px;border-radius:8px;background:linear-gradient(90deg,#f0f8f8,#f6fffb);border:1px solid rgba(0,0,0,0.04);font-weight:700;margin-bottom:8px}
+  .types{display:flex;flex-wrap:wrap;gap:8px}
+  .prod-btn{padding:8px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);background:transparent;cursor:pointer;min-width:140px;text-align:center;transition:all .12s}
+  .prod-btn:hover{box-shadow:0 6px 18px rgba(0,0,0,0.06);transform:translateY(-2px)}
+  .prod-btn .small{display:block;font-size:12px;color:var(--muted);margin-top:6px}
+  .prod-out{color:var(--danger);text-decoration:line-through}
+  table{width:100%;border-collapse:collapse;margin-top:12px}
+  th,td{padding:8px;border:1px solid rgba(0,0,0,0.06);text-align:center;font-size:14px}
+  .btn{padding:8px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);background:#fff;cursor:pointer}
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .client-card{padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.04);background:#fff;margin-bottom:8px}
+  .search{padding:8px;border:1px solid rgba(0,0,0,0.06);width:100%;border-radius:6px}
+  .flex{display:flex;gap:8px;align-items:center}
+  .muted-note{color:var(--muted);font-size:12px;margin-top:8px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>نظام المبيعات المتكامل — لوحة التحكم</h1>
+  <div class="muted">الشاشة الرئيسية — اختر قسم للبدء</div>
+</header>
+
+<div class="wrap">
+
+  <!-- Dashboard -->
+  <div id="dashboard" class="dash-grid">
+    <div class="dash-btn" onclick="openPage('suppliersClientsPage')">
+      <span class="dash-emoji">🏢👥</span>
+      <div style="font-weight:700">الموردين & العملاء</div>
+      <div class="muted">إدارة الموردين والعملاء (مُدمجين)</div>
+    </div>
+
+    <div class="dash-btn" onclick="openPage('inventoryPage')">
+      <span class="dash-emoji">📦</span>
+      <div style="font-weight:700">الأصناف & المخزون</div>
+      <div class="muted">عرض/تعديل الأصناف والمخزون</div>
+    </div>
+
+    <div class="dash-btn" onclick="openPage('salesPage')">
+      <span class="dash-emoji">💰</span>
+      <div style="font-weight:700">المبيعات</div>
+      <div class="muted">إنشاء فاتورة وخصم المخزون تلقائياً</div>
+    </div>
+
+    <div class="dash-btn" onclick="openPage('invoicesPage')">
+      <span class="dash-emoji">🧾</span>
+      <div style="font-weight:700">الفواتير</div>
+      <div class="muted">عرض وطباعة الفواتير المحفوظة</div>
+    </div>
+  </div>
+
+  <!-- Suppliers / Clients (merged) -->
+  <div id="suppliersClientsPage" class="page">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h2 style="margin:0">الموردين & العملاء</h2>
+      <div class="flex">
+        <button class="btn" onclick="openPage('dashboard')">الرجوع</button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;margin-top:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:260px">
+        <h3>قائمة (موردين + عملاء)</h3>
+        <input id="scSearch" class="search" placeholder="ابحث باسم أو هاتف..." oninput="renderSCList()">
+        <div id="scList" style="margin-top:10px"></div>
+        <div class="muted-note">الموردين سيتم دمجهم تلقائياً من ملف الموردين (key: dataRows).</div>
+      </div>
+
+      <div style="width:360px">
+        <h3>إضافة مورد/عميل</h3>
+        <input id="scName" class="search" placeholder="الاسم">
+        <input id="scPhone1" class="search" placeholder="رقم 1">
+        <input id="scPhone2" class="search" placeholder="رقم 2 (اختياري)">
+        <input id="scEmail" class="search" placeholder="البريد الإلكتروني">
+        <input id="scCompany" class="search" placeholder="اسم الشركة (إن وجد)">
+        <input id="scAddress" class="search" placeholder="العنوان">
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <button class="btn primary" onclick="addSC()">حفظ</button>
+          <button class="btn" onclick="clearSCForm()">مسح</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:12px">
+      <button class="btn" onclick="exportSC()">تصدير JSON</button>
+      <button class="btn" onclick="importSC()">استيراد JSON</button>
+    </div>
+  </div>
+
+  <!-- Inventory Page -->
+  <div id="inventoryPage" class="page">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h2 style="margin:0">الأصناف و المخزون</h2>
+      <div class="flex">
+        <button class="btn" onclick="openPage('dashboard')">الرجوع</button>
+        <button class="btn" onclick="openAddProduct()">إضافة صنف/نوع</button>
+      </div>
+    </div>
+
+    <div style="margin-top:12px" class="container">
+      <div class="left">
+        <input id="invSearch" class="search" placeholder="ابحث باسم المصنف أو النوع..." oninput="renderInventory()">
+        <div id="inventoryContainer" style="margin-top:12px"></div>
+      </div>
+
+      <div class="right">
+        <h4>إضافة / تعديل آخر إدخال</h4>
+        <label>المصنف</label>
+        <select id="catSelect" class="search" onchange="onCatChange()"></select>
+        <div id="newCatDiv" style="display:none;margin-top:8px"><input id="newCatName" class="search" placeholder="اسم مصنف جديد"></div>
+
+        <label style="margin-top:8px">النوع</label>
+        <select id="typeSelect" class="search" onchange="onTypeChange()"></select>
+        <div id="newTypeDiv" style="display:none;margin-top:8px"><input id="newTypeName" class="search" placeholder="اسم نوع جديد"></div>
+
+        <label style="margin-top:8px">سعر الشراء</label>
+        <input id="purchaseInput" class="search" type="number" min="0">
+
+        <label>سعر البيع</label>
+        <input id="sellInput" class="search" type="number" min="0">
+
+        <label>الكمية</label>
+        <input id="qtyInput" class="search" type="number" min="0">
+
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <button class="btn primary" onclick="saveProduct()">حفظ</button>
+          <button class="btn" onclick="resetAddProduct()">مسح</button>
+        </div>
+
+        <div class="muted-note">عند حفظ مصنف/نوع جديد يُنشأ سجل جديد مع تاريخ. يمكنك تعديل آخر إدخال من قائمة الأصناف.</div>
+      </div>
+    </div>
+
+    <div style="margin-top:12px">
+      <button class="btn" onclick="exportCategories()">تصدير JSON</button>
+      <button class="btn" onclick="importCategories()">استيراد JSON</button>
+    </div>
+  </div>
+
+  <!-- Sales Page -->
+  <div id="salesPage" class="page">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h2 style="margin:0">المبيعات — إنشاء فاتورة</h2>
+      <div class="flex">
+        <button class="btn" onclick="openPage('dashboard')">الرجوع</button>
+        <button class="btn" onclick="openPage('inventoryPage')">إدارة المخزون</button>
+      </div>
+    </div>
+
+    <div style="margin-top:12px" class="container">
+      <div class="left">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-weight:700">المصنفات والمنتجات</div>
+          <div>
+            <button class="btn" onclick="renderInventory()">تحديث</button>
+          </div>
+        </div>
+        <div id="salesInventory" style="margin-top:10px"></div>
+      </div>
+
+      <div class="right">
+        <h4>الفاتورة المؤقتة</h4>
+        <div style="margin-bottom:8px">
+          <button class="btn" onclick="openClientSelector()">اختر/أضف عميل</button>
+        </div>
+        <div id="chosenClientBox" class="client-card">لم يتم اختيار عميل بعد</div>
+
+        <table>
+          <thead><tr><th>اسم</th><th>كمية</th><th>سعر</th><th>المجموع</th><th>إجراء</th></tr></thead>
+          <tbody id="cartBody"></tbody>
+        </table>
+
+        <div style="margin-top:8px;font-weight:700">المجموع الكلي: <span id="grandTotal">0.00</span></div>
+
+        <div style="margin-top:10px;display:flex;gap:8px">
+          <button class="btn primary" onclick="finalizeInvoice()">حفظ الفاتورة وخصم المخزون</button>
+          <button class="btn" onclick="clearCartConfirm()">تفريغ السلة</button>
+        </div>
+        <div class="muted-note">سيتم خصم المخزون من آخر إدخال لكل نوع (الأحدث).</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Invoices Page -->
+  <div id="invoicesPage" class="page">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h2 style="margin:0">الفواتير</h2>
+      <div>
+        <button class="btn" onclick="openPage('dashboard')">الرجوع</button>
+      </div>
+    </div>
+
+    <div style="margin-top:12px">
+      <input id="invSearch" class="search" placeholder="ابحث باسم العميل أو المنتج..." oninput="renderInvoices()">
+      <div id="invoicesList" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <!-- Client selector modal (simple) -->
+  <div id="clientSelector" style="display:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:90">
+    <div style="background:#fff;padding:12px;border-radius:10px;box-shadow:0 16px 48px rgba(0,0,0,0.12);min-width:320px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3 style="margin:0">اختر العميل</h3>
+        <button class="btn" onclick="closeClientSelector()">إغلاق</button>
+      </div>
+      <div style="margin-top:8px">
+        <input id="selectorSearch" class="search" placeholder="ابحث..." oninput="renderClientSelectorList()">
+        <div id="clientSelectorList" style="max-height:300px;overflow:auto;margin-top:8px"></div>
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <button class="btn primary" onclick="showNewClientForm()">عميل جديد</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ================= بيانات التخزين ومحاكاة الدمج ================= */
+/* مفاتيح localStorage المستخدمة:
+   - categories_v2 : الأصناف والمخزون
+   - dataRows       : موردين (النسخة الكبيرة قد تخزن الموردين هنا)
+   - clients        : عملاء (القائمة المحلية)
+   - sales_history  : الفواتير المحفوظة
+*/
+
+let categories = JSON.parse(localStorage.getItem('categories_v2') || '[]');
+let dataRows = JSON.parse(localStorage.getItem('dataRows') || '[]'); // موردين من الكود الكبير
+let clients = JSON.parse(localStorage.getItem('clients') || '[]');
+let invoices = JSON.parse(localStorage.getItem('sales_history') || '[]');
+
+// عند التحميل: دمج الموردين داخل قائمة clients (تجنّب التكرار)
+function mergeSuppliersIntoClients(){
+  (dataRows||[]).forEach(s=>{
+    const supplier = s.supplier || {};
+    const company = s.company || {};
+    const name = supplier.name || company.name || supplier.email || supplier.phone1 || ('مورد-'+Math.random().toString(36).slice(2,6));
+    if(!clients.some(c => (c.name === name && (c.phone1 === supplier.phone1 || c.phone1 === supplier.phone2)))){
+      clients.push({
+        name: name,
+        phone1: supplier.phone1 || '',
+        phone2: supplier.phone2 || '',
+        email: supplier.email || '',
+        companyName: company.name || '',
+        companyNum1: company.num1 || '',
+        companyNum2: company.num2 || '',
+        address: company.address || ''
+      });
+    }
+  });
+  localStorage.setItem('clients', JSON.stringify(clients));
+}
+
+// استدعاء الدمج عند التحميل
+mergeSuppliersIntoClients();
+
+/* ====== تنقّل بين الصفحات (Dashboard / Pages) ====== */
+function openPage(id){
+  document.getElementById('dashboard').style.display = (id==='dashboard') ? 'grid' : 'none';
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  if(id !== 'dashboard'){
+    document.getElementById(id).classList.add('active');
+  } else {
+    // إظهار داشبورد
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.getElementById('dashboard').style.display='grid';
+  }
+  // تهيئة عند الدخول لصفحات معينة
+  if(id === 'suppliersClientsPage') renderSCList();
+  if(id === 'inventoryPage') { prepareAddProduct(); renderInventory(); }
+  if(id === 'salesPage') { renderSalesInventory(); renderCart(); renderChosenClient(); }
+  if(id === 'invoicesPage') renderInvoices();
+}
+
+/* افتراضي: عرض dashboard */
+openPage('dashboard');
+
+/* ================= أساليب الموردين والعملاء (merged) ================= */
+function renderSCList(){
+  const q = (document.getElementById('scSearch').value||'').trim().toLowerCase();
+  const area = document.getElementById('scList'); area.innerHTML = '';
+  clients.forEach((c,i)=>{
+    if(q && !((c.name||'').toLowerCase().includes(q) || (c.phone1||'').includes(q) || (c.phone2||'').includes(q))) return;
+    const div = document.createElement('div'); div.className='client-card';
+    div.innerHTML = `<div style="font-weight:800">${c.name}</div>
+      <div>رقم1: ${c.phone1||'-'}</div>
+      <div>رقم2: ${c.phone2||'-'}</div>
+      <div>البريد: ${c.email||'-'}</div>
+      <div style="margin-top:8px;display:flex;gap:8px">
+        <button class="btn" onclick="pickClientFromList(${i})">اختيار</button>
+        <button class="btn" onclick="editSC(${i})">تعديل</button>
+        <button class="btn" onclick="deleteSC(${i})">حذف</button>
+      </div>`;
+    area.appendChild(div);
+  });
+}
+
+function addSC(){
+  const name = (document.getElementById('scName').value||'').trim();
+  if(!name){ alert('اكتب اسم'); return; }
+  const obj = {
+    name, phone1: document.getElementById('scPhone1').value.trim(),
+    phone2: document.getElementById('scPhone2').value.trim(), email: document.getElementById('scEmail').value.trim(),
+    companyName: document.getElementById('scCompany').value.trim(), address: document.getElementById('scAddress').value.trim()
+  };
+  clients.push(obj);
+  localStorage.setItem('clients', JSON.stringify(clients));
+  clearSCForm(); renderSCList();
+  alert('تم الحفظ');
+}
+function clearSCForm(){
+  ['scName','scPhone1','scPhone2','scEmail','scCompany','scAddress'].forEach(id=>document.getElementById(id).value='');
+}
+function editSC(i){
+  const c = clients[i]; if(!c) return;
+  document.getElementById('scName').value = c.name||'';
+  document.getElementById('scPhone1').value = c.phone1||'';
+  document.getElementById('scPhone2').value = c.phone2||'';
+  document.getElementById('scEmail').value = c.email||'';
+  document.getElementById('scCompany').value = c.companyName||'';
+  document.getElementById('scAddress').value = c.address||'';
+  // حذف القديم وسيعيد الحفظ كجديد عند الضغط حفظ (بسيط)
+  clients.splice(i,1); localStorage.setItem('clients', JSON.stringify(clients));
+  renderSCList();
+}
+function deleteSC(i){
+  if(!confirm('هل تريد حذف هذا السجل؟')) return;
+  clients.splice(i,1); localStorage.setItem('clients', JSON.stringify(clients)); renderSCList();
+}
+function exportSC(){ downloadText('clients_export.json', JSON.stringify(clients,null,2)); }
+function importSC(){
+  const txt = prompt('الصق JSON لاستيراد (يحَل محلّ القوائم الحالية):');
+  if(!txt) return;
+  try{
+    const arr = JSON.parse(txt);
+    if(!Array.isArray(arr)) throw new Error('يجب أن يكون مصفوفة');
+    clients = arr; localStorage.setItem('clients', JSON.stringify(clients)); alert('تم الاستيراد'); renderSCList();
+  } catch(e){ alert('خطأ JSON: '+e.message) }
+}
+
+/* ================= أصناف / مخزون ================= */
+function saveCategories(){ localStorage.setItem('categories_v2', JSON.stringify(categories)); }
+
+function prepareAddProduct(){
+  const sels = document.getElementById('catSelect');
+  sels.innerHTML = '';
+  const names = categories.map(c=>c.name);
+  names.forEach(n=>{
+    const o = document.createElement('option'); o.value = n; o.text = n; sels.appendChild(o);
+  });
+  const optNew = document.createElement('option'); optNew.value = '_new_'; optNew.text='-- جديد --'; sels.appendChild(optNew);
+  sels.value = names[0] || '_new_';
+  onCatChange();
+}
+
+function onCatChange(){
+  const catVal = document.getElementById('catSelect').value;
+  document.getElementById('newCatDiv').style.display = (catVal === '_new_') ? 'block' : 'none';
+  const typeSel = document.getElementById('typeSelect'); typeSel.innerHTML='';
+  if(catVal === '_new_'){ const o=document.createElement('option'); o.value='_new_'; o.text='-- جديد --'; typeSel.appendChild(o); typeSel.value='_new_'; document.getElementById('newTypeDiv').style.display='block'; return; }
+  const cat = categories.find(c=>c.name===catVal);
+  if(cat){
+    Object.keys(cat.types||{}).forEach(tn=>{
+      const o=document.createElement('option'); o.value=tn; o.text=tn; typeSel.appendChild(o);
+    });
+  }
+  const optNew = document.createElement('option'); optNew.value='_new_'; optNew.text='-- جديد --'; typeSel.appendChild(optNew);
+  typeSel.value = typeSel.options.length ? typeSel.options[0].value : '_new_';
+  document.getElementById('newTypeDiv').style.display='none';
+}
+function onTypeChange(){
+  document.getElementById('newTypeDiv').style.display = (document.getElementById('typeSelect').value === '_new_') ? 'block' : 'none';
+}
+
+function saveProduct(){
+  let catName = document.getElementById('catSelect').value;
+  const newCatName = document.getElementById('newCatName').value.trim();
+  if(catName === '_new_'){
+    if(!newCatName){ alert('اكتب اسم المصنف'); return; }
+    if(categories.some(c=>c.name.toLowerCase()===newCatName.toLowerCase())){ alert('المصنف موجود'); return; }
+    catName = newCatName; categories.push({name:catName, types:{}}); 
+  }
+  let typeName = document.getElementById('typeSelect').value;
+  const newTypeName = document.getElementById('newTypeName').value.trim();
+  if(typeName === '_new_'){
+    if(!newTypeName){ alert('اكتب اسم النوع'); return; }
+    const cat = categories.find(c=>c.name===catName);
+    if(cat && Object.keys(cat.types||{}).some(t=>t.toLowerCase()===newTypeName.toLowerCase())){ alert('النوع موجود'); return; }
+    typeName = newTypeName;
+  }
+  const purchase = Number(document.getElementById('purchaseInput').value||0);
+  const sell = Number(document.getElementById('sellInput').value||0);
+  const qty = Number(document.getElementById('qtyInput').value||0);
+  const entry = {purchase, sell, qty, datetime: new Date().toLocaleString()};
+  let catObj = categories.find(c=>c.name===catName);
+  if(!catObj){ catObj = {name:catName, types:{}}; categories.push(catObj); }
+  if(!catObj.types[typeName]) catObj.types[typeName]=[];
+  catObj.types[typeName].push(entry);
+  saveCategories();
+  resetAddProduct();
+  renderInventory();
+  alert('تم الحفظ');
+}
+
+function resetAddProduct(){
+  ['newCatName','newTypeName','purchaseInput','sellInput','qtyInput'].forEach(id=>document.getElementById(id).value='');
+  prepareAddProduct();
+}
+
+/* عرض الأصناف — مع وضع خط أحمر على النفد */
+function renderInventory(){
+  const q = (document.getElementById('invSearch')||{value:''}).value.trim().toLowerCase();
+  const cont = document.getElementById('inventoryContainer'); cont.innerHTML='';
+  if(!categories.length){ cont.innerHTML = '<div class="muted">لا توجد أصناف.</div>'; return; }
+  categories.forEach(cat=>{
+    const types = Object.keys(cat.types||{});
+    const matching = types.filter(tn=> !q || tn.toLowerCase().includes(q) || cat.name.toLowerCase().includes(q));
+    if(!matching.length) return;
+    const wrap = document.createElement('div');
+    const hdr = document.createElement('div'); hdr.className='cat-header'; hdr.innerText = cat.name; wrap.appendChild(hdr);
+    const box = document.createElement('div'); box.className='types';
+    matching.forEach(tn=>{
+      const entries = cat.types[tn]||[]; if(!entries.length) return;
+      const last = entries[entries.length-1];
+      const btn = document.createElement('button'); btn.className='prod-btn';
+      const out = (last.qty||0) <= 0;
+      if(out) btn.classList.add('prod-out');
+      btn.innerHTML = `<div style="font-weight:700">${tn}</div><div class="small">الكمية: ${last.qty||0} • سعر: ${last.sell||0}</div>`;
+      btn.onclick = ()=> {
+        if(out){ alert('هذا المنتج نفد'); return; }
+        // فتح تعديل السريع: نضع القيم في الجانب الأيمن للاختبار
+        document.getElementById('catSelect').value = cat.name; onCatChange();
+        document.getElementById('typeSelect').value = tn; onTypeChange();
+        document.getElementById('purchaseInput').value = last.purchase||0;
+        document.getElementById('sellInput').value = last.sell||0;
+        document.getElementById('qtyInput').value = last.qty||0;
+      };
+      box.appendChild(btn);
+    });
+    wrap.appendChild(box); cont.appendChild(wrap);
+  });
+}
+
+/* استيراد/تصدير الأصناف */
+function exportCategories(){ downloadText('categories_export.json', JSON.stringify(categories,null,2)); }
+function importCategories(){
+  const txt = prompt('الصق JSON لاستيراد الأصناف (يحل محل الحالية):');
+  if(!txt) return;
+  try{
+    const arr = JSON.parse(txt);
+    if(!Array.isArray(arr)) throw new Error('يجب أن يكون مصفوفة');
+    categories = arr; saveCategories(); alert('تم الاستيراد'); renderInventory();
+  }catch(e){ alert('خطأ: '+e.message) }
+}
+
+/* ================= مبيعات / سلة ================= */
+let cart = []; // {key,catName,typeName,qty,unitPrice}
+let selectedClient = null;
+
+function renderSalesInventory(){
+  // مشابه لعرض Inventory لكن عند الضغط يضيف إلى السلة (إذا متوفر)
+  const cont = document.getElementById('salesInventory'); cont.innerHTML='';
+  if(!categories.length){ cont.innerHTML='<div class="muted">لا توجد أصناف.</div>'; return; }
+  categories.forEach(cat=>{
+    const hdr = document.createElement('div'); hdr.className='cat-header'; hdr.innerText = cat.name; cont.appendChild(hdr);
+    const box = document.createElement('div'); box.className='types';
+    Object.keys(cat.types||{}).forEach(tn=>{
+      const entries = cat.types[tn]||[]; if(!entries.length) return;
+      const last = entries[entries.length-1];
+      const btn = document.createElement('button'); btn.className='prod-btn';
+      const out = (last.qty||0) <= 0;
+      if(out) btn.classList.add('prod-out');
+      btn.innerHTML = `<div style="font-weight:700">${tn}</div><div class="small">الكمية: ${last.qty||0} • سعر: ${last.sell||0}</div>`;
+      btn.onclick = ()=> {
+        if(out){ alert('هذا المنتج نفد'); return; }
+        addToCart(cat.name, tn, last.sell);
+      };
+      box.appendChild(btn);
+    });
+    cont.appendChild(box);
+  });
+}
+
+function addToCart(catName, typeName, unitPrice){
+  const key = `${catName}||${typeName}`;
+  const it = cart.find(x=>x.key===key);
+  if(it) it.qty += 1;
+  else cart.push({key,catName,typeName,qty:1,unitPrice:Number(unitPrice||0)});
+  renderCart();
+}
+
+function renderCart(){
+  const body = document.getElementById('cartBody'); body.innerHTML='';
+  let grand=0;
+  cart.forEach((it,idx)=>{
+    const total = it.qty * it.unitPrice; grand += total;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${it.typeName}</td>
+      <td>
+        <button class="btn" onclick="changeQty(${idx},-1)">-</button>
+        <span style="margin:0 8px">${it.qty}</span>
+        <button class="btn" onclick="changeQty(${idx},1)">+</button>
+      </td>
+      <td>${it.unitPrice}</td>
+      <td>${total.toFixed(2)}</td>
+      <td><button class="btn" onclick="removeCartItem(${idx})">حذف</button></td>`;
+    body.appendChild(tr);
+  });
+  document.getElementById('grandTotal').innerText = grand.toFixed(2);
+  renderChosenClient();
+}
+
+function changeQty(i,delta){
+  if(!cart[i]) return;
+  cart[i].qty += delta;
+  if(cart[i].qty <= 0) cart.splice(i,1);
+  renderCart();
+}
+function removeCartItem(i){ cart.splice(i,1); renderCart(); }
+function clearCartConfirm(){ if(!cart.length){ alert('السلة فارغة'); return; } if(!confirm('تفريغ السلة؟')) return; cart=[]; renderCart(); }
+
+function openClientSelector(){ document.getElementById('clientSelector').style.display='block'; renderClientSelectorList(); }
+function closeClientSelector(){ document.getElementById('clientSelector').style.display='none'; }
+function renderClientSelectorList(){
+  const q = (document.getElementById('selectorSearch')||{value:''}).value.trim().toLowerCase();
+  const area = document.getElementById('clientSelectorList'); area.innerHTML='';
+  if(!clients.length){ area.innerHTML='<div class="muted">لا يوجد عملاء</div>'; return; }
+  clients.forEach((c,i)=>{
+    if(q && !((c.name||'').toLowerCase().includes(q) || (c.phone1||'').includes(q))) return;
+    const d = document.createElement('div'); d.className='client-card';
+    d.innerHTML = `<div style="font-weight:700">${c.name}</div><div>${c.phone1||''} — ${c.email||''}</div>
+      <div style="margin-top:6px;display:flex;gap:8px">
+        <button class="btn" onclick="selectClient(${i})">اختيار</button>
+      </div>`;
+    area.appendChild(d);
+  });
+}
+function selectClient(i){ selectedClient = clients[i]; closeClientSelector(); renderChosenClient(); }
+function showNewClientForm(){ closeClientSelector(); openPage('suppliersClientsPage'); document.getElementById('scName').focus(); }
+
+// عرض بيانات العميل المختار داخل الفاتورة
+function renderChosenClient(){
+  const box = document.getElementById('chosenClientBox');
+  if(!selectedClient){ box.innerHTML = 'لم يتم اختيار عميل بعد'; return; }
+  box.innerHTML = `<div style="font-weight:800">${selectedClient.name}</div>
+    <div>${selectedClient.phone1||'-'}</div><div>${selectedClient.email||'-'}</div>`;
+}
+function pickClientFromList(i){ selectedClient = clients[i]; renderChosenClient(); alert('تم اختيار العميل'); }
+
+/* إنهاء الفاتورة — خصم المخزون وحفظ الفاتورة */
+function finalizeInvoice(){
+  if(!cart.length){ alert('السلة فارغة'); return; }
+  if(!selectedClient){ alert('اختر العميل أولاً'); return; }
+  // خصم المخزون من آخر إدخال لكل نوع
+  cart.forEach(it=>{
+    const cat = categories.find(c=>c.name===it.catName); if(!cat) return;
+    const entries = cat.types[it.typeName]; if(!entries || !entries.length) return;
+    entries[entries.length-1].qty = Math.max(0, (entries[entries.length-1].qty||0) - it.qty);
+  });
+  saveCategories();
+  // حفظ الفاتورة
+  const now = new Date();
+  const inv = { datetime: now.toLocaleString(), client: selectedClient, products: JSON.parse(JSON.stringify(cart)), total: cart.reduce((a,b)=>a+a+b.qty*b.unitPrice,0) };
+  // correct total calc:
+  inv.total = cart.reduce((a,b)=>a + b.qty*b.unitPrice, 0);
+  invoices.push(inv); localStorage.setItem('sales_history', JSON.stringify(invoices));
+  // تنظيف السلة و إعادة العرض
+  cart = []; renderCart(); renderInventory(); renderSalesInventory();
+  alert('تم حفظ الفاتورة وخصم المخزون.');
+}
+
+/* ================= فواتير ================= */
+function renderInvoices(){
+  const q = (document.getElementById('invSearch')||{value:''}).value.trim().toLowerCase();
+  const area = document.getElementById('invoicesList'); area.innerHTML='';
+  if(!invoices.length){ area.innerHTML = '<div class="muted">لا توجد فواتير.</div>'; return; }
+  invoices.slice().reverse().forEach((inv, idxInv)=>{
+    if(q){
+      const match = (inv.client && ((inv.client.name||'').toLowerCase().includes(q) || (inv.client.phone1||'').includes(q))) ||
+        inv.products.some(p=> (p.typeName||'').toLowerCase().includes(q));
+      if(!match) return;
+    }
+    const card = document.createElement('div'); card.className='client-card';
+    card.innerHTML = `<div style="font-weight:800">${inv.datetime}</div>
+      <div style="margin-top:6px">العميل: ${inv.client.name||'-'}</div>
+      <div style="margin-top:8px"><button class="btn" onclick="viewInvoice(${invoices.length-1-idxInv})">عرض الفاتورة</button></div>`;
+    area.appendChild(card);
+  });
+}
+function viewInvoice(i){
+  const inv = invoices[i]; if(!inv) return;
+  let txt = `تاريخ: ${inv.datetime}\nالعميل: ${inv.client.name}\n\nالمنتجات:\n`;
+  inv.products.forEach((p,j)=> txt += `${j+1}. ${p.typeName} — كمية: ${p.qty} — سعر الوحدة: ${p.unitPrice} — المجموع: ${(p.qty*p.unitPrice).toFixed(2)}\n`);
+  txt += `\nالإجمالي: ${inv.total.toFixed(2)}`;
+  alert(txt);
+}
+
+/* ============ أدوات مساعدة ============ */
+function downloadText(filename, text){
+  const a = document.createElement('a');
+  const blob = new Blob([text], {type:'application/json'});
+  a.href = URL.createObjectURL(blob); a.download = filename; document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+
+/* تحميل أولي */
+window.addEventListener('load', ()=>{
+  // إعادة تحميل المتغيرات من localStorage (تأكد)
+  categories = JSON.parse(localStorage.getItem('categories_v2') || JSON.stringify(categories));
+  dataRows = JSON.parse(localStorage.getItem('dataRows') || JSON.stringify(dataRows));
+  clients = JSON.parse(localStorage.getItem('clients') || JSON.stringify(clients));
+  invoices = JSON.parse(localStorage.getItem('sales_history') || JSON.stringify(invoices));
+  mergeSuppliersIntoClients();
+  prepareAddProduct();
+  renderInventory();
+  renderSalesInventory();
+  renderSCList();
+  renderInvoices();
+});
+</script>
+
+</body>
+</html>
