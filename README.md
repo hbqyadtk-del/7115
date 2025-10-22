@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>نظام إدارة شركة أبو الفراق — كامل</title>
+<title>نظام إدارة شركة أشعبيات الحارة</title>
 <style>
   :root{
     --bg:#f7fff9; --card:#ffffff; --text:#111;
@@ -61,7 +61,7 @@
 </head>
 <body>
 <header>
-  <h1>نظام إدارة شركة أبو الفراق</h1>
+  <h1>نظام إدارة   شعبيات الحارة</h1>
   <div class="muted">نسخة محلية — كل البيانات مخزنة في متصفحك (LocalStorage)</div>
 </header>
 
@@ -892,7 +892,7 @@ function viewInvoice(id){
 
 function printInvoice(id){
   const inv = invoices.find(x=>x.id===id); if(!inv) return;
-  const companyName='شركة أبو الفراق';
+  const companyName='شركة شعبيات الحارة ';
   let paymentsHtml = '';
   const paid = sumPaymentsOfInvoice(inv);
   (inv.payments||[]).forEach(p=> paymentsHtml += `<tr><td>${toDateString(p.datetime)}</td><td>${p.id}</td><td>${p.amount}</td><td>${escapeHtml(p.method||'')}</td></tr>`);
@@ -1031,7 +1031,7 @@ function renderDocumentsTable(){
 /* print / delete single document */
 function printSingleDocument(id){
   const d = documents.find(x=>x.id===id); if(!d) return;
-  const company = 'أبو الفراق';
+  const company = ' شعبيات الحارة';
   const html = `<div style="direction:rtl;font-family:Arial;padding:10px;max-width:700px;margin:10px auto;border:1px solid #ddd;border-radius:8px">
     <div style="display:flex;justify-content:space-between"><div style="font-weight:900;color:#b37a3b"><img src="${logoDataUrl}" style="height:36px;vertical-align:middle" /> ${company}</div><div>تاريخ: ${toDateString(d.datetime)}</div></div>
     <div style="margin-top:8px"><strong>النوع:</strong> ${escapeHtml(d.type)}</div>
